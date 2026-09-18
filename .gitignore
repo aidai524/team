@@ -51,6 +51,8 @@ pnpm-debug.log*
 venv
 .venv
 *.pyc
+*.db
+*.sqlite3
 staticfiles
 mediafiles
 .env

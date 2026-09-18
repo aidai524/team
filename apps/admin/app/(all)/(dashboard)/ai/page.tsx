@@ -15,6 +15,7 @@ import { useInstance } from "@/hooks/store";
 import type { Route } from "./+types/page";
 // local
 import { InstanceAIForm } from "./form";
+import { InstanceAIUsage } from "./usage";
 
 const InstanceAIPage = observer(function InstanceAIPage(_props: Route.ComponentProps) {
   // store
@@ -30,7 +31,10 @@ const InstanceAIPage = observer(function InstanceAIPage(_props: Route.ComponentP
       }}
     >
       {formattedConfig ? (
-        <InstanceAIForm config={formattedConfig} />
+        <>
+          <InstanceAIForm config={formattedConfig} />
+          <InstanceAIUsage />
+        </>
       ) : (
         <Skeleton className="space-y-8">
           <Skeleton.Item height="50px" width="40%" />
