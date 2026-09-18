@@ -103,3 +103,41 @@ curl -s https://team.stableflow.ai/ai/ready    # {"status":"ready","plane_user":
 - 浏览器不接触网关密钥（Caddy 服务端注入）。
 - MCP token 目前明文存 `mcp_connections.config_json`，**加密存储是后续项**。
 - 对外提供网络服务时，需遵守 AGPL §13 提供修改后源码（见计划 §10 合规清单）。
+
+## 7. 自托管发布栈集成（本实例实际部署方式）
+
+本实例线上**不是**用仓库根的 `docker-compose.yml`（源码构建整栈），而是官方发布栈
+（`/root/plane-selfhost/plane-app/`，预构建 `makeplane/*:v1.4.2`）。AI Gateway 以
+**叠加**方式集成，保留原有数据与域名：
+
+### 7.1 组成
+- `plane-ai`：从 `/root/plane/ai` 构建（本地镜像 `plane-app-plane-ai:latest`）。
+- `plane-ai-db`：`pgvector/pgvector:pg15`。
+- `proxy`：挂载 `Caddyfile.ai`（含 `/ai/*` 路由），并注入 `AI_GATEWAY_KEY`。
+- `web`/`admin`：从本仓库源码重建为本地镜像 `makeplane/plane-{frontend,admin}:v1.4.2-ai`。
+
+### 7.2 部署机关键文件
+| 文件 | 说明 |
+| --- | --- |
+| `docker-compose.yaml` | 已叠加 AI 服务与 proxy 改动 |
+| `Caddyfile.ai` | 含 `/ai/*` 路由（header_up 需嵌套在 reverse_proxy 内） |
+| `plane-ai.env` | AI Gateway 环境变量（含密钥，**勿提交**） |
+| `plane.env` | 追加 `AI_GATEWAY_KEY` / `AI_DB_*` |
+
+### 7.3 重建前端（改前端代码后必做）
+```bash
+cd /root/plane && git pull
+docker build -f apps/web/Dockerfile.web   -t makeplane/plane-frontend:v1.4.2-ai .
+docker build -f apps/admin/Dockerfile.admin -t makeplane/plane-admin:v1.4.2-ai .
+cd /root/plane-selfhost/plane-app
+docker compose -f docker-compose.yaml --env-file=plane.env up -d web admin
+```
+
+### 7.4 升级上游后需重新应用
+`./setup.sh upgrade` 会覆盖 `docker-compose.yaml`。升级后需重新：
+1. 叠加 `plane-ai`/`plane-ai-db` 与 proxy 的 `Caddyfile.ai` 挂载、`AI_GATEWAY_KEY`；
+2. 将 `web`/`admin` 的 `image:` 改回本地 AI 标签并重建。
+
+### 7.5 已知修复
+- 原提交的 `Caddyfile.ce` 中 `header_up` 直接置于 `handle_path` 内，Caddy 无法解析，
+  proxy 启动即失败。已在 `e67343bba3` 修正为嵌套于 `reverse_proxy` 块内。
