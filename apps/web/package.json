@@ -62,6 +62,7 @@
     "react-hook-form": "catalog:",
     "react-is": "catalog:",
     "react-markdown": "catalog:",
+    "remark-gfm": "catalog:",
     "react-masonry-component": "catalog:",
     "react-pdf-html": "catalog:",
     "react-popper": "catalog:",
