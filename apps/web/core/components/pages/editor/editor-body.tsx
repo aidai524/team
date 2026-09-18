@@ -45,6 +45,7 @@ import { PageContentLoader } from "../loaders/page-content-loader";
 import { PageEditorHeaderRoot } from "./header";
 import { PageContentBrowser } from "./summary";
 import { EditorAIMenu } from "./ai/menu";
+import { PageEditorAIWriteBar } from "./ai/write-bar";
 
 export type TEditorBodyConfig = {
   fileHandler: TFileHandler;
@@ -270,6 +271,9 @@ export const PageEditorBody = observer(function PageEditorBody(props: Props) {
           <div className="page-header-container group/page-header">
             <div className={blockWidthClassName}>
               <PageEditorHeaderRoot page={page} projectId={projectId} />
+              <div className="relative">
+                <PageEditorAIWriteBar editorRef={editorRef} />
+              </div>
             </div>
           </div>
           <CollaborativeDocumentEditorWithRef

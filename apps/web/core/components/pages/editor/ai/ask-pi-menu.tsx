@@ -22,10 +22,11 @@ type Props = {
   isRegenerating: boolean;
   response: string | undefined;
   workspaceSlug: string;
+  onAsk: (instruction: string) => Promise<void>;
 };
 
 export function AskPiMenu(props: Props) {
-  const { handleInsertText, handleRegenerate, isRegenerating, response, workspaceSlug } = props;
+  const { handleInsertText, handleRegenerate, isRegenerating, response, workspaceSlug, onAsk } = props;
   // states
   const [query, setQuery] = useState("");
   // store hooks
@@ -110,9 +111,15 @@ export function AskPiMenu(props: Props) {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Tell AI what to do..."
           />
-          <span className="grid size-4 flex-shrink-0 place-items-center">
-            <CircleArrowUp className="size-4 text-secondary" />
-          </span>
+          <button
+            type="button"
+            className="grid size-4 flex-shrink-0 place-items-center text-secondary hover:text-primary"
+            onClick={() => void onAsk(query)}
+            disabled={!query.trim()}
+            aria-label="发送"
+          >
+            <CircleArrowUp className="size-4" />
+          </button>
         </div>
       </div>
     </>

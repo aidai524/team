@@ -164,6 +164,7 @@ services:
     environment:
       FILE_SIZE_LIMIT: ${FILE_SIZE_LIMIT:-5242880}
       BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-uploads}
+      AI_GATEWAY_KEY: ${AI_GATEWAY_KEY:-}
     depends_on:
       - web
       - api

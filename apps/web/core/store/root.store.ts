@@ -66,6 +66,8 @@ import type { IStickyStore } from "./sticky/sticky.store";
 import { StickyStore } from "./sticky/sticky.store";
 import type { IThemeStore } from "./theme.store";
 import { ThemeStore } from "./theme.store";
+import type { IAIChatStore } from "./ai";
+import { AIChatStore } from "./ai";
 import type { IUserStore } from "./user";
 import { UserStore } from "./user";
 import type { IWorkspaceRootStore } from "./workspace";
@@ -103,6 +105,7 @@ export class CoreRootStore {
   workItemFilters: IWorkItemFilterStore;
   powerK: IPowerKStore;
   timelineStore: ITimelineStore;
+  aiChat: IAIChatStore;
 
   constructor() {
     this.router = new RouterStore();
@@ -135,6 +138,7 @@ export class CoreRootStore {
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
     this.timelineStore = new TimeLineStore(this);
+    this.aiChat = new AIChatStore();
   }
 
   resetOnSignOut() {
@@ -169,6 +173,7 @@ export class CoreRootStore {
     this.workItemFilters = new WorkItemFilterStore();
     this.powerK = new PowerKStore();
     this.timelineStore = new TimeLineStore(this);
+    this.aiChat = new AIChatStore();
   }
 }
 

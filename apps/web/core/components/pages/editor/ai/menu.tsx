@@ -22,10 +22,8 @@ import { RichTextEditor } from "@/components/editor/rich-text";
 // plane web constants
 import { AI_EDITOR_TASKS, LOADING_TEXTS } from "@plane/constants";
 // plane web services
-import type { TTaskPayload } from "@/services/ai.service";
-import { AIService } from "@/services/ai.service";
+import { editorAsk, editorTask } from "@/services/ai/ai-gateway.service";
 import { AskPiMenu } from "./ask-pi-menu";
-const aiService = new AIService();
 
 type Props = {
   editorRef: EditorRefApi | null;
@@ -35,38 +33,38 @@ type Props = {
   workspaceSlug: string;
 };
 
+type EditorTone = "default" | "formal" | "casual" | "professional";
+
 const MENU_ITEMS: {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   key: AI_EDITOR_TASKS;
   label: string;
 }[] = [
-  {
-    key: AI_EDITOR_TASKS.ASK_ANYTHING,
-    icon: AiStar1Outline,
-    label: "Ask Pi",
-  },
+  { key: AI_EDITOR_TASKS.ASK_ANYTHING, icon: AiStar1Outline, label: "Ask AI" },
+  { key: AI_EDITOR_TASKS.PARAPHRASE, icon: AiStar1Outline, label: "改写" },
+  { key: AI_EDITOR_TASKS.SIMPLIFY, icon: AiStar1Outline, label: "简化" },
+  { key: AI_EDITOR_TASKS.ELABORATE, icon: AiStar1Outline, label: "扩写" },
+  { key: AI_EDITOR_TASKS.SUMMARIZE, icon: AiStar1Outline, label: "总结" },
+  { key: AI_EDITOR_TASKS.TITLE, icon: AiStar1Outline, label: "生成标题" },
 ];
 
-const TONES_LIST = [
-  {
-    key: "default",
-    label: "Default",
-    casual_score: 5,
-    formal_score: 5,
-  },
-  {
-    key: "professional",
-    label: "💼 Professional",
-    casual_score: 0,
-    formal_score: 10,
-  },
-  {
-    key: "casual",
-    label: "😃 Casual",
-    casual_score: 10,
-    formal_score: 0,
-  },
+const TONES_LIST: { key: EditorTone; label: string }[] = [
+  { key: "default", label: "Default" },
+  { key: "professional", label: "💼 Professional" },
+  { key: "formal", label: "Formal" },
+  { key: "casual", label: "😃 Casual" },
 ];
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function textToHtml(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => `<p>${escapeHtml(line) || "<br>"}</p>`)
+    .join("");
+}
 
 export function EditorAIMenu(props: Props) {
   const { editorRef, isOpen, onClose, workspaceId, workspaceSlug } = props;
@@ -74,13 +72,21 @@ export function EditorAIMenu(props: Props) {
   const [activeTask, setActiveTask] = useState<AI_EDITOR_TASKS | null>(null);
   const [response, setResponse] = useState<string | undefined>(undefined);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [tone, setTone] = useState<EditorTone>("default");
   // refs
   const responseContainerRef = useRef<HTMLDivElement>(null);
+
   // params
-  const handleGenerateResponse = async (payload: TTaskPayload) => {
+  const handleGenerateResponse = async (task: AI_EDITOR_TASKS, text: string, toneKey: EditorTone) => {
     if (!workspaceSlug) return;
-    await aiService.performEditorTask(workspaceSlug.toString(), payload).then((res) => setResponse(res.response));
+    const result = await editorTask({
+      task: task.toLowerCase() as "paraphrase" | "simplify" | "elaborate" | "summarize" | "title",
+      text,
+      tone: toneKey,
+    });
+    setResponse(textToHtml(result));
   };
+
   // handle task click
   const handleClick = async (key: AI_EDITOR_TASKS) => {
     const selection = editorRef?.getSelectedText();
@@ -89,47 +95,31 @@ export function EditorAIMenu(props: Props) {
     if (key === AI_EDITOR_TASKS.ASK_ANYTHING) return;
     setResponse(undefined);
     setIsRegenerating(false);
-    await handleGenerateResponse({
-      task: key,
-      text_input: selection,
-    });
+    await handleGenerateResponse(key, selection, tone);
   };
+
   // handle re-generate response
   const handleRegenerate = async () => {
     const selection = editorRef?.getSelectedText();
-    if (!selection || !activeTask) return;
+    if (!selection || !activeTask || activeTask === AI_EDITOR_TASKS.ASK_ANYTHING) return;
     setIsRegenerating(true);
-    await handleGenerateResponse({
-      task: activeTask,
-      text_input: selection,
-    })
-      .then(() =>
-        responseContainerRef.current?.scrollTo({
-          top: 0,
-          behavior: "smooth",
-        })
-      )
+    await handleGenerateResponse(activeTask, selection, tone)
+      .then(() => responseContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" }))
       .finally(() => setIsRegenerating(false));
   };
-  // handle re-generate response
-  const handleToneChange = async (key: string) => {
-    const selectedTone = TONES_LIST.find((t) => t.key === key);
+
+  // handle tone change
+  const handleToneChange = async (key: EditorTone) => {
     const selection = editorRef?.getSelectedText();
-    if (!selectedTone || !selection || !activeTask) return;
+    if (!selection || !activeTask || activeTask === AI_EDITOR_TASKS.ASK_ANYTHING) return;
+    setTone(key);
     setResponse(undefined);
     setIsRegenerating(false);
-    await handleGenerateResponse({
-      casual_score: selectedTone.casual_score,
-      formal_score: selectedTone.formal_score,
-      task: activeTask,
-      text_input: selection,
-    }).then(() =>
-      responseContainerRef.current?.scrollTo({
-        top: 0,
-        behavior: "smooth",
-      })
+    await handleGenerateResponse(activeTask, selection, key).then(() =>
+      responseContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" })
     );
   };
+
   // handle replace selected text with the response
   const handleInsertText = (insertOnNextLine: boolean) => {
     if (!response) return;
@@ -205,6 +195,13 @@ export function EditorAIMenu(props: Props) {
               isRegenerating={isRegenerating}
               response={response}
               workspaceSlug={workspaceSlug}
+              onAsk={async (instruction) => {
+                const selection = editorRef?.getSelectedText();
+                if (!selection) return;
+                setResponse(undefined);
+                const result = await editorAsk({ instruction, text: selection, tone });
+                setResponse(textToHtml(result));
+              }}
             />
           ) : (
             <>
@@ -269,28 +266,28 @@ export function EditorAIMenu(props: Props) {
                   </div>
                 ) : (
                   <p className="text-13 text-secondary">
-                    {activeTask ? LOADING_TEXTS[activeTask] : "Pi is writing"}...
+                    {activeTask ? LOADING_TEXTS[activeTask] : "AI is writing"}...
                   </p>
                 )}
               </div>
               <div className="sticky bottom-0 flex w-full items-center gap-2 bg-surface-1 py-2 pl-[54.8px]">
-                {TONES_LIST.map((tone) => (
+                {TONES_LIST.map((item) => (
                   <button
-                    key={tone.key}
+                    key={item.key}
                     type="button"
                     className={cn(
                       "rounded-sm bg-layer-1 p-1 text-11 font-medium text-secondary transition-colors outline-none",
                       {
-                        "bg-accent-primary/20 text-accent-primary": tone.key === "default",
+                        "bg-accent-primary/20 text-accent-primary": tone === item.key,
                       }
                     )}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      handleToneChange(tone.key);
+                      handleToneChange(item.key);
                     }}
                   >
-                    {tone.label}
+                    {item.label}
                   </button>
                 ))}
               </div>

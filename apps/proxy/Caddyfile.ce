@@ -17,6 +17,14 @@
 
 	reverse_proxy /static/* api:8000
 
+	# AI gateway (independent service). handle_path strips the /ai prefix,
+	# so /ai/health -> /health on plane-ai:8000. The gateway key is injected
+	# server-side so the browser never holds it.
+	handle_path /ai/* {
+		header_up X-AI-Gateway-Key {$AI_GATEWAY_KEY}
+		reverse_proxy plane-ai:8000
+	}
+
 	reverse_proxy /{$BUCKET_NAME}/* plane-minio:9000
 	reverse_proxy /{$BUCKET_NAME} plane-minio:9000
 

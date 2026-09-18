@@ -1,0 +1,39 @@
+# AI Gateway compose fragment (overlay).
+#
+# Usage from the repo root:
+#   docker compose -f docker-compose.yml -f deployments/ai/docker-compose.ai.yml up -d
+#
+# Relative paths resolve against this file's directory (Compose v2), i.e.
+# `../../ai` -> repo-root/ai, `./plane-ai.env` -> deployments/ai/plane-ai.env.
+# Copy `plane-ai.env.example` to `plane-ai.env` and fill in secrets first.
+
+services:
+  plane-ai:
+    container_name: plane-ai
+    build:
+      context: ../../ai
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./plane-ai.env
+    expose:
+      - "8000"
+    depends_on:
+      - plane-db
+      - api
+
+  # AI-specific Postgres with pgvector (Phase 3 retrieval). Kept separate
+  # from Plane's main DB so the core stack is never affected.
+  plane-ai-db:
+    container_name: plane-ai-db
+    image: pgvector/pgvector:pg15
+    restart: always
+    environment:
+      POSTGRES_USER: ${AI_DB_USER:-plane_ai}
+      POSTGRES_PASSWORD: ${AI_DB_PASSWORD:-}
+      POSTGRES_DB: ${AI_DB_NAME:-plane_ai}
+    volumes:
+      - plane_ai_pgdata:/var/lib/postgresql/data
+
+volumes:
+  plane_ai_pgdata:
