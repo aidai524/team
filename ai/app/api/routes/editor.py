@@ -131,4 +131,4 @@ async def editor_stream(request: EditorStreamRequest) -> EventSourceResponse:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI gateway is not configured (missing plane/llm API keys)",
         )
-    return EventSourceResponse(_editor_stream(request))
+    return EventSourceResponse(_editor_stream(request), sep="\n")

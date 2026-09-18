@@ -171,4 +171,4 @@ async def chat(request: ChatRequest) -> EventSourceResponse:
             detail="AI gateway is not configured (missing plane/llm API keys)",
         )
     await ensure_ai_enabled(request.workspace_slug)
-    return EventSourceResponse(_stream(request, settings))
+    return EventSourceResponse(_stream(request, settings), sep="\n")
