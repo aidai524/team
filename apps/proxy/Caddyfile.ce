@@ -21,8 +21,9 @@
 	# so /ai/health -> /health on plane-ai:8000. The gateway key is injected
 	# server-side so the browser never holds it.
 	handle_path /ai/* {
-		header_up X-AI-Gateway-Key {$AI_GATEWAY_KEY}
-		reverse_proxy plane-ai:8000
+		reverse_proxy plane-ai:8000 {
+			header_up X-AI-Gateway-Key {$AI_GATEWAY_KEY}
+		}
 	}
 
 	reverse_proxy /{$BUCKET_NAME}/* plane-minio:9000
